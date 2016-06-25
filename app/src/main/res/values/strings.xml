@@ -124,5 +124,6 @@
     <string name="finish_summary_overlapping_frames_message"><![CDATA[The chosen interval between frames was too short.<br/>
         Therefore the <font color="#FF8888">effective interval between frames may have varied</font> and is at least in some cases 
         different from your chosen one.]]></string>
-    
+    <string name="exposureLabel" />
+
 </resources>

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+
+    <SurfaceView
+        android:id="@+id/liveViewCamera"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <LinearLayout
+        android:id="@+id/buttonsOnSurfaceLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_gravity="top|center">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Aperture"
+            android:id="@+id/textView"
+            android:layout_gravity="center" />
+
+        <Spinner
+            android:id="@+id/apertureButton"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="Aperture"
+            android:spinnerMode="dropdown" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Shutter speed"
+            android:id="@+id/textView2"
+            android:layout_gravity="center" />
+
+        <Spinner
+            android:id="@+id/shutteSpeedButton"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="Shutter speed"
+            android:spinnerMode="dropdown" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ISO"
+            android:id="@+id/textView3"
+            android:layout_gravity="center" />
+
+        <Spinner
+            android:id="@+id/iSObutton"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:text="ISO"
+            android:spinnerMode="dropdown" />
+    </LinearLayout>
+
+    <Switch
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Manual"
+        android:id="@+id/manualSwitch"
+        android:layout_gravity="bottom|right" />
+
+    <ZoomControls
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/zoomControls"
+        android:layout_gravity="center_horizontal|bottom" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Focus mode"
+        android:id="@+id/textView4"
+        android:layout_gravity="left|bottom" />
+
+    <Spinner
+        android:id="@+id/focusModeButton"
+        android:layout_width="100dp"
+        android:layout_weight="1"
+        android:layout_height="50dp"
+        android:text="Aperture"
+        android:spinnerMode="dropdown"
+        android:layout_gravity="left|bottom"
+        android:layout_marginLeft="80dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/exposureLabel"
+        android:id="@+id/exposureLabel"
+        android:layout_gravity="left|center_vertical" />
+
+</FrameLayout>
