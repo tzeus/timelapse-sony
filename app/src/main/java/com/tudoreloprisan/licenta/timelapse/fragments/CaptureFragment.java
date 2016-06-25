@@ -16,6 +16,7 @@ import android.os.PowerManager.WakeLock;
 import android.preference.PreferenceManager;
 import android.text.Html;
 import android.text.Spanned;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -342,7 +343,7 @@ public class CaptureFragment extends StepFragment {
 
 			@Override
 			public void onResult(String url) {
-				
+				Log.d(CaptureFragment.class.getSimpleName(), "URL IS: " + url);
 				if(showLastFramePreview) {
 
 					ImageRequest request = new ImageRequest(url,
