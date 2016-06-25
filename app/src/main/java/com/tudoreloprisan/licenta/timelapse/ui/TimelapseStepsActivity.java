@@ -57,7 +57,7 @@ FinishFragmentListener, CaptureFragmentListener {
 	private FinishFragment mFinishFragment = new FinishFragment();
 	private CaptureFragment mCaptureFragment = new CaptureFragment();
 
-	private StepFragment[] fragmentsArray = new StepFragment[] { new ConnectionFragment(), new CameraSettingsFragment(),
+	private StepFragment[] fragmentsArray = new StepFragment[] {new CameraSettingsFragment(),
 			new TimelapseSettingsFragment(), mCaptureFragment, mFinishFragment };
 
 	private NfcAdapter mNfcAdapter;

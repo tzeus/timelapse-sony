@@ -52,6 +52,13 @@ public class ConnectionFragment extends StepFragment implements WifiListener {
     private AlertDialog alertDialogChooseNetworkCreation;
     private AlertDialog alertDialogAskForPassword;
 
+    public static ConnectionFragment newInstance(){
+        return new ConnectionFragment();
+    }
+
+    public ConnectionFragment(){
+
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
