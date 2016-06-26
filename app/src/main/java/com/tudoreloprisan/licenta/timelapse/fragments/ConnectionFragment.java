@@ -31,6 +31,7 @@ import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.tudoreloprisan.licenta.R;
 import com.tudoreloprisan.licenta.io.WifiHandler;
@@ -39,10 +40,13 @@ import com.tudoreloprisan.licenta.sdk.CameraIO;
 import com.tudoreloprisan.licenta.sdk.core.TestConnectionListener;
 import com.tudoreloprisan.licenta.sdk.model.Device;
 import com.tudoreloprisan.licenta.sdk.model.DeviceManager;
+import com.tudoreloprisan.licenta.sdk.sample.ServerDevice;
+import com.tudoreloprisan.licenta.sdk.sample.SimpleSsdpClient;
 import com.tudoreloprisan.licenta.timelapse.StepFragment;
 import com.tudoreloprisan.licenta.timelapse.TimelapseApplication;
 import com.tudoreloprisan.licenta.timelapse.ui.TimelapseStepsActivity;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ConnectionFragment extends StepFragment implements WifiListener {
@@ -57,10 +61,12 @@ public class ConnectionFragment extends StepFragment implements WifiListener {
     private CameraIO mCameraIO;
 
     private TextView connectionInfoMessage;
-
+    private SimpleSsdpClient mSsdpClient;
     private AlertDialog alertDialogChooseNetworkConnection;
     private AlertDialog alertDialogChooseNetworkCreation;
     private AlertDialog alertDialogAskForPassword;
+    private ArrayList<ServerDevice> mListAdapter;
+    private boolean mActivityActive;
 
     public static ConnectionFragment newInstance() {
         return new ConnectionFragment();
@@ -77,6 +83,8 @@ public class ConnectionFragment extends StepFragment implements WifiListener {
         mDeviceManager = ((TimelapseApplication) getActivity().getApplication()).getDeviceManager();
         mWifiHandler = ((TimelapseApplication) getActivity().getApplication()).getWifiHandler();
         mCameraIO = ((TimelapseApplication) getActivity().getApplication()).getCameraIO();
+        mSsdpClient = new SimpleSsdpClient();
+        mListAdapter = new ArrayList<>();
 
     }
 
@@ -100,6 +108,8 @@ public class ConnectionFragment extends StepFragment implements WifiListener {
                              Bundle savedInstanceState) {
         Log.d(TAG, "Entered on create View");
         View viewResult = inflater.inflate(R.layout.fragment_connection, container, false);
+        mActivityActive = true;
+        searchDevices();
         onEnterFragment();
 
         connectionInfoMessage = (TextView) viewResult.findViewById(R.id.connectionInfoMessage);
@@ -110,8 +120,9 @@ public class ConnectionFragment extends StepFragment implements WifiListener {
             public void onClick(View v) {
                 FragmentManager fragmentManager = getFragmentManager();
                 FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-                StillImageSettingsFragment stillImageSettingsFragment= new StillImageSettingsFragment();
+                StillImageSettingsFragment stillImageSettingsFragment= StillImageSettingsFragment.newInstance(mListAdapter);
                 fragmentTransaction.add(R.id.fragmentContainer, stillImageSettingsFragment, stillImageSettingsFragment.getClass().getSimpleName());
+                onExitFragment();
                 fragmentTransaction.commit();  }
         });
         mTimelapseButton = ((Button) viewResult.findViewById(R.id.timelapseButton));
@@ -204,6 +215,58 @@ public class ConnectionFragment extends StepFragment implements WifiListener {
             alertDialogAskForPassword.cancel();
         }
 
+    }
+
+    /**
+     * Start searching supported devices.
+     */
+    private void searchDevices() {
+        mSsdpClient.search(new SimpleSsdpClient.SearchResultHandler() {
+
+            @Override
+            public void onDeviceFound(final ServerDevice device) {
+                // Called by non-UI thread.
+                Log.d(TAG, ">> Search device found: " + device.getFriendlyName());
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mListAdapter.add(device);
+                    }
+                });
+            }
+
+            @Override
+            public void onFinished() {
+                // Called by non-UI thread.
+                Log.d(TAG, ">> Search finished.");
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (mActivityActive) {
+                            Toast.makeText(getActivity(), //
+                                    R.string.msg_device_search_finish, //
+                                    Toast.LENGTH_SHORT).show(); //
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onErrorFinished() {
+                // Called by non-UI thread.
+                Log.d(TAG, ">> Search Error finished.");
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (mActivityActive) {
+                            Toast.makeText(getActivity(), //
+                                    R.string.msg_error_device_searching, //
+                                    Toast.LENGTH_SHORT).show(); //
+                        }
+                    }
+                });
+            }
+        });
     }
 
 

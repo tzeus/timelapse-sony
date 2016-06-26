@@ -76,6 +76,101 @@ public class RemoteApi {
 
     // Camera Service APIs
 
+
+
+
+    public JSONObject getAvailableFNumber() throws IOException {
+        String service = "camera";
+        try {
+            JSONObject requestJson =
+                    new JSONObject().put("method", "getAvailableFNumber") //
+                            .put("params", new JSONArray()).put("id", id()) //
+                            .put("version", "1.0");
+            String url = findActionListUrl(service) + "/" + service;
+
+            log("Request:  " + requestJson.toString());
+            String responseJson = SimpleHttpClient.httpPost(url, requestJson.toString());
+            log("Response: " + responseJson);
+            return new JSONObject(responseJson);
+        } catch (JSONException e) {
+            throw new IOException(e);
+        }
+    }
+
+    public JSONObject getAvailableExposureMode() throws IOException {
+        String service = "camera";
+        try {
+            JSONObject requestJson =
+                    new JSONObject().put("method", "getAvailableExposureMode") //
+                            .put("params", new JSONArray()).put("id", id()) //
+                            .put("version", "1.0");
+            String url = findActionListUrl(service) + "/" + service;
+
+            log("Request:  " + requestJson.toString());
+            String responseJson = SimpleHttpClient.httpPost(url, requestJson.toString());
+            log("Response: " + responseJson);
+            return new JSONObject(responseJson);
+        } catch (JSONException e) {
+            throw new IOException(e);
+        }
+    }
+
+    public JSONObject getAvailableShutterSpeed() throws IOException {
+        String service = "camera";
+        try {
+            JSONObject requestJson =
+                    new JSONObject().put("method", "getAvailableShutterSpeed") //
+                            .put("params", new JSONArray()).put("id", id()) //
+                            .put("version", "1.0");
+            String url = findActionListUrl(service) + "/" + service;
+
+            log("Request:  " + requestJson.toString());
+            String responseJson = SimpleHttpClient.httpPost(url, requestJson.toString());
+            log("Response: " + responseJson);
+            return new JSONObject(responseJson);
+        } catch (JSONException e) {
+            throw new IOException(e);
+        }
+    }
+
+    public JSONObject getAvailableIsoSpeed() throws IOException {
+        String service = "camera";
+        try {
+            JSONObject requestJson =
+                    new JSONObject().put("method", "getAvailableIsoSpeedRate") //
+                            .put("params", new JSONArray()).put("id", id()) //
+                            .put("version", "1.0");
+            String url = findActionListUrl(service) + "/" + service;
+
+            log("Request:  " + requestJson.toString());
+            String responseJson = SimpleHttpClient.httpPost(url, requestJson.toString());
+            log("Response: " + responseJson);
+            return new JSONObject(responseJson);
+        } catch (JSONException e) {
+            throw new IOException(e);
+        }
+    }
+
+
+    public JSONObject getAvailableFocusModes() throws IOException {
+        String service = "camera";
+        try {
+            JSONObject requestJson =
+                    new JSONObject().put("method", "getAvailableFocusMode") //
+                            .put("params", new JSONArray()).put("id", id()) //
+                            .put("version", "1.0");
+            String url = findActionListUrl(service) + "/" + service;
+
+            log("Request:  " + requestJson.toString());
+            String responseJson = SimpleHttpClient.httpPost(url, requestJson.toString());
+            log("Response: " + responseJson);
+            return new JSONObject(responseJson);
+        } catch (JSONException e) {
+            throw new IOException(e);
+        }
+    }
+
+
     /**
      * Calls getAvailableApiList API to the target server. Request JSON data is
      * such like as below.

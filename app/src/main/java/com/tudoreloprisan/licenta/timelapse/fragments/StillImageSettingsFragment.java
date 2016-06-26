@@ -2,9 +2,13 @@ package com.tudoreloprisan.licenta.timelapse.fragments;
 
 import android.annotation.TargetApi;
 import android.content.Intent;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.StrictMode;
 import android.support.annotation.Nullable;
 import android.text.Spanned;
 import android.util.Log;
@@ -24,11 +28,11 @@ import android.widget.ZoomControls;
 import com.tudoreloprisan.licenta.R;
 import com.tudoreloprisan.licenta.sdk.CameraIO;
 import com.tudoreloprisan.licenta.sdk.CameraListener;
+import com.tudoreloprisan.licenta.sdk.StartLiveviewListener;
 import com.tudoreloprisan.licenta.sdk.TakePictureListener;
 import com.tudoreloprisan.licenta.sdk.model.AvailableCameraSettings;
 import com.tudoreloprisan.licenta.sdk.model.ExposureMode;
 import com.tudoreloprisan.licenta.sdk.model.SettingType;
-import com.tudoreloprisan.licenta.sdk.sample.CameraApplication;
 import com.tudoreloprisan.licenta.sdk.sample.DisplayHelper;
 import com.tudoreloprisan.licenta.sdk.sample.RemoteApi;
 import com.tudoreloprisan.licenta.sdk.sample.ServerDevice;
@@ -41,7 +45,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -51,6 +58,7 @@ import java.util.Set;
  * Created by Doru on 6/24/2016.
  */
 public class StillImageSettingsFragment extends StepFragment {
+    public static final String DEVICES = "devices";
     private static final int TAKE_PICTURE_ACTIVITY_RESULT = 0x1;
     private static final String TAG = StillImageSettingsFragment.class.getSimpleName();
 
@@ -79,16 +87,36 @@ public class StillImageSettingsFragment extends StepFragment {
     private AvailableCameraSettings exposureModeSettings = new AvailableCameraSettings(SettingType.EXPOSURE_MODES);
 
 
+    public StillImageSettingsFragment() {
+    }
+
+    public static StillImageSettingsFragment newInstance(ArrayList<ServerDevice> serverDeviceList) {
+        StillImageSettingsFragment stillImageSettingsFragment = new StillImageSettingsFragment();
+        Bundle arguments = new Bundle();
+        arguments.putSerializable(DEVICES, serverDeviceList);
+        stillImageSettingsFragment.setArguments(arguments);
+        return stillImageSettingsFragment;
+    }
+
     @TargetApi(Build.VERSION_CODES.M)
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         mCameraIO = ((TimelapseApplication) getActivity().getApplication()).getCameraIO();
-
+        //FIXME DRAGONS AHEAD
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
+        //END OF DRAGONS
         View viewResult = inflater.inflate(R.layout.still_image_fragment, container, false);
 
         //NEW ADDED CODE
         TimelapseApplication app = (TimelapseApplication) getActivity().getApplication();
+        ArrayList<ServerDevice> servers = new ArrayList<>();
+//        getArguments()
+        servers= ((ArrayList<ServerDevice>) getArguments().get(DEVICES));
+        if (!servers.isEmpty()) {
+            app.setTargetServerDevice(servers.get(0));
+        }
         mTargetServer = app.getTargetServerDevice();
         mRemoteApi = new RemoteApi(mTargetServer);
         app.setRemoteApi(mRemoteApi);
@@ -216,7 +244,6 @@ public class StillImageSettingsFragment extends StepFragment {
         });
 
 
-
         focusModeSpinner = ((Spinner) viewResult.findViewById(R.id.focusModeButton));
         ArrayAdapter<String> focusModeAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
         focusModeAdapter.addAll(focusModeSettings.getAvailableSettings());
@@ -241,7 +268,7 @@ public class StillImageSettingsFragment extends StepFragment {
         manualSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                mCameraIO.setExposureMode(isChecked==true ? ExposureMode.MANUAL.getName() : ExposureMode.INTELLIGENT_AUTO.getName());
+                mCameraIO.setExposureMode(isChecked == true ? ExposureMode.MANUAL.getName() : ExposureMode.INTELLIGENT_AUTO.getName());
             }
         });
 
@@ -352,17 +379,119 @@ public class StillImageSettingsFragment extends StepFragment {
         return viewResult;
     }
 
+    /**
+     * Take a picture and retrieve the image data.
+     */
+    private void takeAndFetchPicture() {
+        if (liveViewSurfaceView == null || !liveViewSurfaceView.isStarted()) {
+            DisplayHelper.toast(getActivity().getApplicationContext(), R.string.msg_error_take_picture);
+            return;
+        }
+
+        new Thread() {
+
+            @Override
+            public void run() {
+                try {
+                    JSONObject replyJson = mRemoteApi.actTakePicture();
+                    JSONArray resultsObj = replyJson.getJSONArray("result");
+                    JSONArray imageUrlsObj = resultsObj.getJSONArray(0);
+                    String postImageUrl = null;
+                    if (1 <= imageUrlsObj.length()) {
+                        postImageUrl = imageUrlsObj.getString(0);
+                    }
+                    if (postImageUrl == null) {
+                        Log.w(TAG, "takeAndFetchPicture: post image URL is null.");
+                        DisplayHelper.toast(getActivity().getApplicationContext(), //
+                                R.string.msg_error_take_picture);
+                        return;
+                    }
+                    // Show progress indicator
+//                    DisplayHelper.setProgressIndicator(SampleCameraActivity.this, true);
+
+                    URL url = new URL(postImageUrl);
+                    InputStream istream = new BufferedInputStream(url.openStream());
+                    BitmapFactory.Options options = new BitmapFactory.Options();
+                    options.inSampleSize = 4; // irresponsible value
+                    final Drawable pictureDrawable =
+                            new BitmapDrawable(getResources(), //
+                                    BitmapFactory.decodeStream(istream, null, options));
+                    istream.close();
+                    getActivity().runOnUiThread(new Runnable() {
+
+                        @Override
+                        public void run() {
+//                            mImagePictureWipe.setVisibility(View.VISIBLE);
+//                            mImagePictureWipe.setImageDrawable(pictureDrawable);
+                        }
+                    });
+
+                } catch (IOException e) {
+                    Log.w(TAG, "IOException while closing slicer: " + e.getMessage());
+                    DisplayHelper.toast(getActivity().getApplicationContext(), //
+                            R.string.msg_error_take_picture);
+                } catch (JSONException e) {
+                    Log.w(TAG, "JSONException while closing slicer");
+                    DisplayHelper.toast(getActivity().getApplicationContext(), //
+                            R.string.msg_error_take_picture);
+                } finally {
+//                    DisplayHelper.setProgressIndicator(SampleCameraActivity.this, false);
+                }
+            }
+        }.start();
+    }
+
+    @Override
+    public void onEnterFragment() {
+        setStepCompleted(true);
+        startLiveView();
+    }
+
+    private void startLiveView() {
+
+        if (liveViewSurfaceView.isStarted() && mCameraIO != null) {
+            return;
+        }
+
+        mCameraIO.startLiveView(new StartLiveviewListener() {
+            @Override
+            public void onResult(String liveviewUrl) {
+                liveViewSurfaceView.start(liveviewUrl);
+            }
+
+            @Override
+            public void onError(String error) {
+
+            }
+        });
+    }
+
+
     private void getInfoForScreenApi() {
         try {
             JSONObject replyJson = null;
-            replyJson = remoteApi.getAvailableApiList();
+            replyJson = mRemoteApi.getAvailableFNumber();
+            populateSettingsObjects(replyJson, apertureSettings);
+            replyJson = mRemoteApi.getAvailableFocusModes();
+            populateSettingsObjects(replyJson, focusModeSettings);
+            replyJson = mRemoteApi.getAvailableIsoSpeed();
+            populateSettingsObjects(replyJson, isoSettings);
+            replyJson = mRemoteApi.getAvailableShutterSpeed();
+            populateSettingsObjects(replyJson, shutterSpeedSettings);
+            replyJson = mRemoteApi.getAvailableExposureMode();
+            populateSettingsObjects(replyJson, exposureModeSettings);
 
 
-        }catch (IOException exc){
+        } catch (IOException | JSONException exc) {
             Log.e(TAG, exc.getMessage());
         }
     }
 
+    private void populateSettingsObjects(JSONObject replyJson, AvailableCameraSettings apertureSettings) throws JSONException {
+        if (replyJson != null) {
+            extractAvailableSettings(replyJson.getJSONArray("result"), apertureSettings);
+        }
+    }
 
 
     private void getInfoForScreen() {
@@ -450,7 +579,7 @@ public class StillImageSettingsFragment extends StepFragment {
                     return;
                 }
                 try {
-                    extractAvailableSettings(response, focusModeSettings);
+                    extractAvailableSettings(response.getJSONArray(0), focusModeSettings);
                 } catch (JSONException e) {
                     Log.e(TAG, e.getMessage());
                 }
