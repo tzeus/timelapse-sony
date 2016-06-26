@@ -88,7 +88,7 @@ public class StillImageSettingsFragment extends StepFragment {
         View viewResult = inflater.inflate(R.layout.still_image_fragment, container, false);
 
         //NEW ADDED CODE
-        CameraApplication app = (CameraApplication ) getActivity().getApplication();
+        TimelapseApplication app = (TimelapseApplication) getActivity().getApplication();
         mTargetServer = app.getTargetServerDevice();
         mRemoteApi = new RemoteApi(mTargetServer);
         app.setRemoteApi(mRemoteApi);
