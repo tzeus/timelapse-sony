@@ -125,5 +125,9 @@
         Therefore the <font color="#FF8888">effective interval between frames may have varied</font> and is at least in some cases 
         different from your chosen one.]]></string>
     <string name="exposureLabel" />
+    <string name="stillImage">Single image</string>
+    <string name="timelapseButtonText">Timelapse</string>
+    <string name="msg_error_connection">Contents not available.</string>
+    <string name="msg_error_non_supported_device">Unsupported device in this app version.</string>
 
 </resources>

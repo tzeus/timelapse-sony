@@ -79,4 +79,22 @@
         android:layout_below="@+id/connectionCameraImage"
         android:layout_centerHorizontal="true" />
 
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/stillImage"
+        android:id="@+id/stillImageButton"
+        android:layout_centerVertical="true"
+        android:layout_alignLeft="@+id/connectionCameraText"
+        android:layout_alignStart="@+id/connectionCameraText" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/timelapseButtonText"
+        android:id="@+id/timelapseButton"
+        android:layout_alignBottom="@+id/stillImageButton"
+        android:layout_toRightOf="@+id/connectionInfoText"
+        android:layout_toEndOf="@+id/connectionInfoText" />
+
 </RelativeLayout>

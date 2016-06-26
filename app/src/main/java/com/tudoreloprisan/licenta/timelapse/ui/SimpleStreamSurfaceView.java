@@ -303,4 +303,14 @@ public class SimpleStreamSurfaceView extends SurfaceView implements
         getHolder().unlockCanvasAndPost(canvas);
     }
 
+    public interface StreamErrorListener {
+
+        enum StreamErrorReason {
+            IO_EXCEPTION,
+            OPEN_ERROR,
+        }
+
+        void onError(StreamErrorReason reason);
+    }
+
 }

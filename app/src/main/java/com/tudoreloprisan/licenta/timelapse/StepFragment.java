@@ -1,7 +1,8 @@
 package com.tudoreloprisan.licenta.timelapse;
 
 
-import android.support.v4.app.Fragment;
+//import android.support.v4.app.Fragment;
+import android.app.Fragment;
 import android.text.Spanned;
 
 public abstract class StepFragment extends Fragment {

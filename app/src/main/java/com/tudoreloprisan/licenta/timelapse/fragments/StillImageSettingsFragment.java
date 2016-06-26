@@ -1,7 +1,9 @@
 package com.tudoreloprisan.licenta.timelapse.fragments;
 
+import android.annotation.TargetApi;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.text.Spanned;
@@ -26,15 +28,24 @@ import com.tudoreloprisan.licenta.sdk.TakePictureListener;
 import com.tudoreloprisan.licenta.sdk.model.AvailableCameraSettings;
 import com.tudoreloprisan.licenta.sdk.model.ExposureMode;
 import com.tudoreloprisan.licenta.sdk.model.SettingType;
+import com.tudoreloprisan.licenta.sdk.sample.CameraApplication;
+import com.tudoreloprisan.licenta.sdk.sample.DisplayHelper;
+import com.tudoreloprisan.licenta.sdk.sample.RemoteApi;
+import com.tudoreloprisan.licenta.sdk.sample.ServerDevice;
+import com.tudoreloprisan.licenta.sdk.sample.SimpleCameraEventObserver;
 import com.tudoreloprisan.licenta.timelapse.StepFragment;
 import com.tudoreloprisan.licenta.timelapse.TimelapseApplication;
 import com.tudoreloprisan.licenta.timelapse.ui.SimpleStreamSurfaceView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by Doru on 6/24/2016.
@@ -44,7 +55,14 @@ public class StillImageSettingsFragment extends StepFragment {
     private static final String TAG = StillImageSettingsFragment.class.getSimpleName();
 
     private CameraIO mCameraIO;
+    private RemoteApi remoteApi;
+    private final Set<String> mAvailableCameraApiSet = new HashSet<String>();
     private SimpleStreamSurfaceView liveViewSurfaceView;
+    private ServerDevice mTargetServer;
+    private SimpleCameraEventObserver mEventObserver;
+    private RemoteApi mRemoteApi;
+    private SimpleCameraEventObserver.ChangeListener mEventListener;
+
     private Spinner apertureSpinner;
     private Spinner shutterSpinner;
     private Spinner isoSpinner;
@@ -61,6 +79,7 @@ public class StillImageSettingsFragment extends StepFragment {
     private AvailableCameraSettings exposureModeSettings = new AvailableCameraSettings(SettingType.EXPOSURE_MODES);
 
 
+    @TargetApi(Build.VERSION_CODES.M)
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -68,9 +87,83 @@ public class StillImageSettingsFragment extends StepFragment {
 
         View viewResult = inflater.inflate(R.layout.still_image_fragment, container, false);
 
-        liveViewSurfaceView = (SimpleStreamSurfaceView) viewResult.findViewById(R.id.camera_settings_liveview);
-        getInfoForScreen();
+        //NEW ADDED CODE
+        CameraApplication app = (CameraApplication ) getActivity().getApplication();
+        mTargetServer = app.getTargetServerDevice();
+        mRemoteApi = new RemoteApi(mTargetServer);
+        app.setRemoteApi(mRemoteApi);
+        mEventObserver = new SimpleCameraEventObserver(getActivity().getApplicationContext(), mRemoteApi);
+        app.setCameraEventObserver(mEventObserver);
 
+        mEventListener = new SimpleCameraEventObserver.ChangeListenerTmpl() {
+
+            @Override
+            public void onShootModeChanged(String shootMode) {
+                Log.d(TAG, "onShootModeChanged() called: " + shootMode);
+                refreshUi();
+            }
+
+            @Override
+            public void onCameraStatusChanged(String status) {
+                Log.d(TAG, "onCameraStatusChanged() called: " + status);
+                refreshUi();
+            }
+
+            @Override
+            public void onApiListModified(List<String> apis) {
+                Log.d(TAG, "onApiListModified() called");
+                synchronized (mAvailableCameraApiSet) {
+                    mAvailableCameraApiSet.clear();
+                    for (String api : apis) {
+                        mAvailableCameraApiSet.add(api);
+                    }
+                    if (!mEventObserver.getLiveviewStatus() //
+                            && isCameraApiAvailable("startLiveview")) {
+                        if (liveViewSurfaceView != null && !liveViewSurfaceView.isStarted()) {
+                            startLiveview();
+                        }
+                    }
+
+//                    FOR ZOOM
+//                    if (isCameraApiAvailable("actZoom")) {
+//                        Log.d(TAG, "onApiListModified(): prepareActZoomButtons()");
+//                        prepareActZoomButtons(true);
+//                    } else {
+//                        prepareActZoomButtons(false);
+//                    }
+                }
+            }
+
+//            @Override
+//            public void onZoomPositionChanged(int zoomPosition) {
+//                Log.d(TAG, "onZoomPositionChanged() called = " + zoomPosition);
+//                if (zoomPosition == 0) {
+//                    mButtonZoomIn.setEnabled(true);
+//                    mButtonZoomOut.setEnabled(false);
+//                } else if (zoomPosition == 100) {
+//                    mButtonZoomIn.setEnabled(false);
+//                    mButtonZoomOut.setEnabled(true);
+//                } else {
+//                    mButtonZoomIn.setEnabled(true);
+//                    mButtonZoomOut.setEnabled(true);
+//                }
+//            }
+
+            @Override
+            public void onLiveviewStatusChanged(boolean status) {
+                Log.d(TAG, "onLiveviewStatusChanged() called = " + status);
+            }
+
+            @Override
+            public void onStorageIdChanged(String storageId) {
+                Log.d(TAG, "onStorageIdChanged() called: " + storageId);
+                refreshUi();
+            }
+        };
+
+        liveViewSurfaceView = (SimpleStreamSurfaceView) viewResult.findViewById(R.id.camera_settings_liveview);
+//        getInfoForScreen();
+        getInfoForScreenApi();
         apertureSpinner = ((Spinner) viewResult.findViewById(R.id.apertureButton));
         ArrayAdapter<String> apertureAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
         apertureAdapter.addAll(apertureSettings.getAvailableSettings());
@@ -259,6 +352,19 @@ public class StillImageSettingsFragment extends StepFragment {
         return viewResult;
     }
 
+    private void getInfoForScreenApi() {
+        try {
+            JSONObject replyJson = null;
+            replyJson = remoteApi.getAvailableApiList();
+
+
+        }catch (IOException exc){
+            Log.e(TAG, exc.getMessage());
+        }
+    }
+
+
+
     private void getInfoForScreen() {
 
         mCameraIO.getExposureModes(new CameraListener() {
@@ -365,6 +471,283 @@ public class StillImageSettingsFragment extends StepFragment {
             availableSettingsList.add(availableSettings.getString(i));
         }
         availableCameraSettings.setAvailableSettings(availableSettingsList);
+    }
+
+    /**
+     * Check if the specified API is available at present. This works correctly
+     * only for Camera API.
+     *
+     * @param apiName
+     * @return
+     */
+    private boolean isCameraApiAvailable(String apiName) {
+        boolean isAvailable = false;
+        synchronized (mAvailableCameraApiSet) {
+            isAvailable = mAvailableCameraApiSet.contains(apiName);
+        }
+        return isAvailable;
+    }
+
+    private void refreshUi() {
+        String cameraStatus = mEventObserver.getCameraStatus();
+        String shootMode = mEventObserver.getShootMode();
+        List<String> availableShootModes = mEventObserver.getAvailableShootModes();
+
+//        // CameraStatus TextView
+//        mTextCameraStatus.setText(cameraStatus);
+//
+//        // Recording Start/Stop Button
+//        if ("MovieRecording".equals(cameraStatus)) {
+//            mButtonRecStartStop.setEnabled(true);
+//            mButtonRecStartStop.setText(R.string.button_rec_stop);
+//        } else if ("IDLE".equals(cameraStatus) && "movie".equals(shootMode)) {
+//            mButtonRecStartStop.setEnabled(true);
+//            mButtonRecStartStop.setText(R.string.button_rec_start);
+//        } else {
+//            mButtonRecStartStop.setEnabled(false);
+//        }
+//
+//        // Take picture Button
+//        if ("still".equals(shootMode) && "IDLE".equals(cameraStatus)) {
+//            mButtonTakePicture.setEnabled(true);
+//        } else {
+//            mButtonTakePicture.setEnabled(false);
+//        }
+//
+//        // Picture wipe Image
+//        if (!"still".equals(shootMode)) {
+//            mImagePictureWipe.setVisibility(View.INVISIBLE);
+//        }
+//
+//        // Update Shoot Modes List
+//        ArrayAdapter<String> adapter = (ArrayAdapter<String>) mSpinnerShootMode.getAdapter();
+//        if (adapter != null) {
+//            adapter.clear();
+//            for (String mode : availableShootModes) {
+//                if (isSupportedShootMode(mode)) {
+//                    adapter.add(mode);
+//                }
+//            }
+//            selectionShootModeSpinner(mSpinnerShootMode, shootMode);
+//        }
+//
+//        // Shoot Mode Buttons
+//        if ("IDLE".equals(cameraStatus)) {
+//            mSpinnerShootMode.setEnabled(true);
+//        } else {
+//            mSpinnerShootMode.setEnabled(false);
+//        }
+//
+//        // Contents List Button
+//        if (isApiSupported("getContentList") //
+//                && isApiSupported("getSchemeList") //
+//                && isApiSupported("getSourceList")) {
+//            String storageId = mEventObserver.getStorageId();
+//            if (storageId == null) {
+//                Log.d(TAG, "not update ContentsList button ");
+//            } else if ("No Media".equals(storageId)) {
+//                mButtonContentsListMode.setEnabled(false);
+//            } else {
+//                mButtonContentsListMode.setEnabled(true);
+//            }
+//        }
+    }
+
+    private void startLiveview() {
+        if (liveViewSurfaceView == null) {
+            Log.w(TAG, "startLiveview mLiveviewSurface is null.");
+            return;
+        }
+        new Thread() {
+            @Override
+            public void run() {
+
+                try {
+                    JSONObject replyJson = null;
+                    replyJson = mRemoteApi.startLiveview();
+
+                    if (!RemoteApi.isErrorReply(replyJson)) {
+                        JSONArray resultsObj = replyJson.getJSONArray("result");
+                        if (1 <= resultsObj.length()) {
+                            // Obtain liveview URL from the result.
+                            final String liveviewUrl = resultsObj.getString(0);
+                            getActivity().runOnUiThread(new Runnable() {
+
+                                @Override
+                                public void run() {
+                                    liveViewSurfaceView.start(liveviewUrl);
+                                }
+                            });
+                        }
+                    }
+                } catch (IOException e) {
+                    Log.w(TAG, "startLiveview IOException: " + e.getMessage());
+                } catch (JSONException e) {
+                    Log.w(TAG, "startLiveview JSONException: " + e.getMessage());
+                }
+            }
+        }.start();
+    }
+
+    private void stopLiveview() {
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    mRemoteApi.stopLiveview();
+                } catch (IOException e) {
+                    Log.w(TAG, "stopLiveview IOException: " + e.getMessage());
+                }
+            }
+        }.start();
+    }
+
+
+    /**
+     * Open connection to the camera device to start monitoring Camera events
+     * and showing liveview.
+     */
+    private void openConnection() {
+
+        mEventObserver.setEventChangeListener(mEventListener);
+        new Thread() {
+
+            @Override
+            public void run() {
+                Log.d(TAG, "openConnection(): exec.");
+
+                try {
+                    JSONObject replyJson = null;
+
+                    // getAvailableApiList
+                    replyJson = mRemoteApi.getAvailableApiList();
+                    loadAvailableCameraApiList(replyJson);
+
+                    // check version of the server device
+                    if (isCameraApiAvailable("getApplicationInfo")) {
+                        Log.d(TAG, "openConnection(): getApplicationInfo()");
+                        replyJson = mRemoteApi.getApplicationInfo();
+                        if (!isSupportedServerVersion(replyJson)) {
+                            DisplayHelper.toast(getActivity().getApplicationContext(), //
+                                    R.string.msg_error_non_supported_device);
+//                            SampleCameraActivity.this.finish();
+                            return;
+                        }
+                    } else {
+                        // never happens;
+                        return;
+                    }
+
+                    // startRecMode if necessary.
+                    if (isCameraApiAvailable("startRecMode")) {
+                        Log.d(TAG, "openConnection(): startRecMode()");
+                        replyJson = mRemoteApi.startRecMode();
+
+                        // Call again.
+                        replyJson = mRemoteApi.getAvailableApiList();
+                        loadAvailableCameraApiList(replyJson);
+                    }
+
+                    // getEvent start
+                    if (isCameraApiAvailable("getEvent")) {
+                        Log.d(TAG, "openConnection(): EventObserver.start()");
+                        mEventObserver.start();
+                    }
+
+                    // Liveview start
+                    if (isCameraApiAvailable("startLiveview")) {
+                        Log.d(TAG, "openConnection(): LiveviewSurface.start()");
+                        startLiveview();
+                    }
+
+                    // prepare UIs
+                    if (isCameraApiAvailable("getAvailableShootMode")) {
+                        Log.d(TAG, "openConnection(): prepareShootModeSpinner()");
+//                        prepareShootModeSpinner();
+                        // Note: hide progress bar on title after this calling.
+                    }
+
+//                    // prepare UIs
+//                    if (isCameraApiAvailable("actZoom")) {
+//                        Log.d(TAG, "openConnection(): prepareActZoomButtons()");
+//                        prepareActZoomButtons(true);
+//                    } else {
+//                        prepareActZoomButtons(false);
+//                    }
+
+                    Log.d(TAG, "openConnection(): completed.");
+                } catch (IOException e) {
+                    Log.w(TAG, "openConnection : IOException: " + e.getMessage());
+                    //DisplayHelper.setProgressIndicator(SampleCameraActivity.this, false);
+                    DisplayHelper.toast(getActivity().getApplicationContext(), R.string.msg_error_connection);
+                }
+            }
+        }.start();
+
+    }
+
+    /**
+     * Stop monitoring Camera events and close liveview connection.
+     */
+    private void closeConnection() {
+
+        Log.d(TAG, "closeConnection(): exec.");
+        // Liveview stop
+        Log.d(TAG, "closeConnection(): LiveviewSurface.stop()");
+        if (liveViewSurfaceView != null) {
+            liveViewSurfaceView.stop();
+            liveViewSurfaceView = null;
+            stopLiveview();
+        }
+
+        // getEvent stop
+        Log.d(TAG, "closeConnection(): EventObserver.release()");
+        mEventObserver.release();
+
+        Log.d(TAG, "closeConnection(): completed.");
+    }
+
+    /**
+     * Check if the version of the server is supported in this application.
+     *
+     * @param replyJson
+     * @return
+     */
+    private boolean isSupportedServerVersion(JSONObject replyJson) {
+        try {
+            JSONArray resultArrayJson = replyJson.getJSONArray("result");
+            String version = resultArrayJson.getString(1);
+            String[] separated = version.split("\\.");
+            int major = Integer.valueOf(separated[0]);
+            if (2 <= major) {
+                return true;
+            }
+        } catch (JSONException e) {
+            Log.w(TAG, "isSupportedServerVersion: JSON format error.");
+        } catch (NumberFormatException e) {
+            Log.w(TAG, "isSupportedServerVersion: Number format error.");
+        }
+        return false;
+    }
+
+    /**
+     * Retrieve a list of APIs that are available at present.
+     *
+     * @param replyJson
+     */
+    private void loadAvailableCameraApiList(JSONObject replyJson) {
+        synchronized (mAvailableCameraApiSet) {
+            mAvailableCameraApiSet.clear();
+            try {
+                JSONArray resultArrayJson = replyJson.getJSONArray("result");
+                JSONArray apiListJson = resultArrayJson.getJSONArray(0);
+                for (int i = 0; i < apiListJson.length(); i++) {
+                    mAvailableCameraApiSet.add(apiListJson.getString(i));
+                }
+            } catch (JSONException e) {
+                Log.w(TAG, "loadAvailableCameraApiList: JSON format error.");
+            }
+        }
     }
 
     @Override

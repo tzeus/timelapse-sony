@@ -2,15 +2,20 @@ package com.tudoreloprisan.licenta.timelapse.fragments;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.NetworkInfo.State;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiConfiguration;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 import android.text.Html;
 import android.text.Spanned;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -19,6 +24,7 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListAdapter;
@@ -35,15 +41,19 @@ import com.tudoreloprisan.licenta.sdk.model.Device;
 import com.tudoreloprisan.licenta.sdk.model.DeviceManager;
 import com.tudoreloprisan.licenta.timelapse.StepFragment;
 import com.tudoreloprisan.licenta.timelapse.TimelapseApplication;
+import com.tudoreloprisan.licenta.timelapse.ui.TimelapseStepsActivity;
 
 import java.util.List;
 
 public class ConnectionFragment extends StepFragment implements WifiListener {
 
     private final static int PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION = 1;
+    private final static String TAG = ConnectionFragment.class.getSimpleName();
 
     private DeviceManager mDeviceManager;
     private WifiHandler mWifiHandler;
+    private Button mStillImageButton;
+    private Button mTimelapseButton;
     private CameraIO mCameraIO;
 
     private TextView connectionInfoMessage;
@@ -52,18 +62,18 @@ public class ConnectionFragment extends StepFragment implements WifiListener {
     private AlertDialog alertDialogChooseNetworkCreation;
     private AlertDialog alertDialogAskForPassword;
 
-    public static ConnectionFragment newInstance(){
+    public static ConnectionFragment newInstance() {
         return new ConnectionFragment();
     }
 
-    public ConnectionFragment(){
+    public ConnectionFragment() {
 
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        Log.d(TAG, "Entered ON CREATE");
         mDeviceManager = ((TimelapseApplication) getActivity().getApplication()).getDeviceManager();
         mWifiHandler = ((TimelapseApplication) getActivity().getApplication()).getWifiHandler();
         mCameraIO = ((TimelapseApplication) getActivity().getApplication()).getCameraIO();
@@ -78,24 +88,44 @@ public class ConnectionFragment extends StepFragment implements WifiListener {
                 Manifest.permission.ACCESS_COARSE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
 
-            requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
-                    PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
+                        PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION);
+            }
         }
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-
+        Log.d(TAG, "Entered on create View");
         View viewResult = inflater.inflate(R.layout.fragment_connection, container, false);
+        onEnterFragment();
 
         connectionInfoMessage = (TextView) viewResult.findViewById(R.id.connectionInfoMessage);
 
+        mStillImageButton = ((Button) viewResult.findViewById(R.id.stillImageButton));
+        mStillImageButton.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                FragmentManager fragmentManager = getFragmentManager();
+                FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+                StillImageSettingsFragment stillImageSettingsFragment= new StillImageSettingsFragment();
+                fragmentTransaction.add(R.id.fragmentContainer, stillImageSettingsFragment, stillImageSettingsFragment.getClass().getSimpleName());
+                fragmentTransaction.commit();  }
+        });
+        mTimelapseButton = ((Button) viewResult.findViewById(R.id.timelapseButton));
+        mTimelapseButton.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getActivity(), TimelapseStepsActivity.class);
+                startActivity(intent);
+            }
+        });
         /**
          * Handle Camera spinner
          */
         final Spinner cameraSpinner = (Spinner) viewResult.findViewById(R.id.connectionCameraSpinner);
-
         ArrayAdapter<Device> adapter = new ArrayAdapter<>(getActivity(),
                 android.R.layout.simple_list_item_1, mDeviceManager.getDevices());
         adapter.sort(Device.COMPARE_BY_DEVICEMODEL);
@@ -131,7 +161,7 @@ public class ConnectionFragment extends StepFragment implements WifiListener {
                 checkForConnection();
             }
         });
-
+        Log.d(TAG, "Returning View");
         return viewResult;
     }
 
@@ -146,6 +176,7 @@ public class ConnectionFragment extends StepFragment implements WifiListener {
     @Override
     public void onEnterFragment() {
         super.onEnterFragment();
+        Log.d(TAG, "Entered ON ENTER FRAGMENT");
 
         if (mWifiHandler != null) {
             mWifiHandler.addListener(this);
@@ -227,21 +258,21 @@ public class ConnectionFragment extends StepFragment implements WifiListener {
         }
 
 		/*
-		 * No Sony Camera network registered on this phone but we found only one in scan 
+         * No Sony Camera network registered on this phone but we found only one in scan
 		 */
         else if (sonyCameraWifiConfiguration.size() == 0 && sonyCameraScanResults.size() == 1) {
             askForNetworkPasswordThenConnect(sonyCameraScanResults.get(0));
         }
 
 		/*
-		 * No Sony Camera network registered on this phone but we found more than one in scan 
+         * No Sony Camera network registered on this phone but we found more than one in scan
 		 */
         else if (sonyCameraWifiConfiguration.size() == 0) {
             selectNetworkForCreation(sonyCameraScanResults);
         }
 
 		/*
-		 * There is only one Sony Camera known network connected
+         * There is only one Sony Camera known network connected
 		 */
         else if (sonyCameraWifiConfiguration.size() == 1) {
             mWifiHandler.connectToNetworkId(sonyCameraWifiConfiguration.get(0).networkId);

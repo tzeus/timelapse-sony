@@ -1,15 +1,19 @@
 package com.tudoreloprisan.licenta.timelapse.ui;
 
 import android.annotation.TargetApi;
+import android.app.Fragment;
+import android.app.FragmentManager;
 import android.content.Intent;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiConfiguration;
 import android.nfc.NfcAdapter;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
+//import android.support.v4.app.Fragment;
+//import android.support.v4.app.FragmentActivity;
+//import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentActivity;
-import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v13.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.util.Pair;
 import android.view.Menu;
@@ -90,7 +94,7 @@ FinishFragmentListener, CaptureFragmentListener {
 
 		// Instantiate a ViewPager and a PagerAdapter.
 		mPager = (ViewPager) findViewById(R.id.pager);
-		mPagerAdapter = new ScreenSlidePagerAdapter(getSupportFragmentManager());
+		mPagerAdapter = new ScreenSlidePagerAdapter(getFragmentManager());
 		mPager.setAdapter(mPagerAdapter);
 
 		mPager.post(new Runnable() {
@@ -232,14 +236,14 @@ FinishFragmentListener, CaptureFragmentListener {
 		(findViewById(R.id.guideStep2)).setBackgroundResource(fragmentPosition == 1 ? R.drawable.blue_bullet : R.drawable.black_bullet);
 		(findViewById(R.id.guideStep3)).setBackgroundResource(fragmentPosition == 2 ? R.drawable.blue_bullet : R.drawable.black_bullet);
 		(findViewById(R.id.guideStep4)).setBackgroundResource(fragmentPosition == 3 ? R.drawable.blue_bullet : R.drawable.black_bullet);
-		(findViewById(R.id.guideStep5)).setBackgroundResource(fragmentPosition == 4 ? R.drawable.blue_bullet : R.drawable.black_bullet);
+//		(findViewById(R.id.guideStep5)).setBackgroundResource(fragmentPosition == 4 ? R.drawable.blue_bullet : R.drawable.black_bullet);
 
 
 		((TextView) findViewById(R.id.guideTitle)).setText(
-				fragmentPosition == 0 ? R.string.guidebar_title_connection :
-					fragmentPosition == 1 ? R.string.guidebar_title_camera_settings :
-						fragmentPosition == 2 ? R.string.guidebar_title_timelapse_settings :
-							fragmentPosition == 3 ? R.string.guidebar_title_capture :
+//				fragmentPosition == 0 ? R.string.guidebar_title_connection :
+					fragmentPosition == 0 ? R.string.guidebar_title_camera_settings :
+						fragmentPosition == 1 ? R.string.guidebar_title_timelapse_settings :
+							fragmentPosition == 2 ? R.string.guidebar_title_capture :
 								R.string.guidebar_title_finish);
 
 	}
@@ -286,7 +290,7 @@ FinishFragmentListener, CaptureFragmentListener {
 	}
 
 
-	private class ScreenSlidePagerAdapter extends FragmentStatePagerAdapter {
+	private class ScreenSlidePagerAdapter extends FragmentPagerAdapter {
 
 
 		public ScreenSlidePagerAdapter(FragmentManager fm) {
