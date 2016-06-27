@@ -132,5 +132,6 @@
     <string name="msg_device_search_finish">Device discovery successfully completed.</string>
     <string name="msg_error_device_searching">Failed to search.\\nStopped.</string>
     <string name="msg_error_take_picture">Failed to take a picture.</string>
+    <string name="msg_error_api_calling">Cannot control device by API.</string>
 
 </resources>

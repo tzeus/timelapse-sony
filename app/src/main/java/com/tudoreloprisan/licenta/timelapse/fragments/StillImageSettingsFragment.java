@@ -13,6 +13,7 @@ import android.support.annotation.Nullable;
 import android.text.Spanned;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -82,7 +83,7 @@ public class StillImageSettingsFragment extends StepFragment {
     private AvailableCameraSettings shutterSpeedSettings = new AvailableCameraSettings(SettingType.SHUTTER_SPEED);
     private AvailableCameraSettings isoSettings = new AvailableCameraSettings(SettingType.ISO);
     private AvailableCameraSettings focusModeSettings = new AvailableCameraSettings(SettingType.FOCUS_MODE);
-
+    private final Set<String> mSupportedApiSet = new HashSet<String>();
     private SpinnerAdapter appertureSpinnerAdapter;
     private AvailableCameraSettings exposureModeSettings = new AvailableCameraSettings(SettingType.EXPOSURE_MODES);
 
@@ -112,8 +113,7 @@ public class StillImageSettingsFragment extends StepFragment {
         //NEW ADDED CODE
         TimelapseApplication app = (TimelapseApplication) getActivity().getApplication();
         ArrayList<ServerDevice> servers = new ArrayList<>();
-//        getArguments()
-        servers= ((ArrayList<ServerDevice>) getArguments().get(DEVICES));
+        servers = ((ArrayList<ServerDevice>) getArguments().get(DEVICES));
         if (!servers.isEmpty()) {
             app.setTargetServerDevice(servers.get(0));
         }
@@ -190,10 +190,9 @@ public class StillImageSettingsFragment extends StepFragment {
         };
 
         liveViewSurfaceView = (SimpleStreamSurfaceView) viewResult.findViewById(R.id.camera_settings_liveview);
-//        getInfoForScreen();
-        getInfoForScreenApi();
         apertureSpinner = ((Spinner) viewResult.findViewById(R.id.apertureButton));
         ArrayAdapter<String> apertureAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
+        getInfoForScreenApi();
         apertureAdapter.addAll(apertureSettings.getAvailableSettings());
         apertureSpinner.setAdapter(apertureAdapter);
         apertureSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -379,6 +378,227 @@ public class StillImageSettingsFragment extends StepFragment {
         return viewResult;
     }
 
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        mEventObserver.activate();
+        liveViewSurfaceView = (SimpleStreamSurfaceView) getActivity().findViewById(R.id.camera_settings_liveview);
+//        mSpinnerShootMode.setFocusable(false);
+//        mButtonContentsListMode.setEnabled(false);
+
+//        mButtonTakePicture.setOnClickListener(new View.OnClickListener() {
+//
+//            @Override
+//            public void onClick(View v) {
+//                takeAndFetchPicture();
+//            }
+//        });
+//        mButtonRecStartStop.setOnClickListener(new View.OnClickListener() {
+//
+//            @Override
+//            public void onClick(View v) {
+//                if ("MovieRecording".equals(mEventObserver.getCameraStatus())) {
+//                    stopMovieRec();
+//                } else if ("IDLE".equals(mEventObserver.getCameraStatus())) {
+//                    startMovieRec();
+//                }
+//            }
+//        });
+//
+//        mImagePictureWipe.setOnClickListener(new View.OnClickListener() {
+//
+//            @Override
+//            public void onClick(View v) {
+//                mImagePictureWipe.setVisibility(View.INVISIBLE);
+//            }
+//        });
+//
+//
+//        mButtonContentsListMode.setOnClickListener(new View.OnClickListener() {
+//
+//            @Override
+//            public void onClick(View v) {
+//                Log.d(TAG, "Clicked contents list mode button");
+//                prepareToStartContentsListMode();
+//            }
+//        });
+
+        prepareOpenConnection();
+
+        Log.d(TAG, "onResume() completed.");
+        
+        
+    }
+
+    /**
+     * Check if the specified API is supported. This is for camera and avContent
+     * service API. The result of this method does not change dynamically.
+     *
+     * @param apiName
+     * @return
+     */
+    private boolean isApiSupported(String apiName) {
+        boolean isAvailable = false;
+        synchronized (mSupportedApiSet) {
+            isAvailable = mSupportedApiSet.contains(apiName);
+        }
+        return isAvailable;
+    }
+
+    private static boolean isShootingStatus(String currentStatus) {
+        Set<String> shootingStatus = new HashSet<String>();
+        shootingStatus.add("IDLE");
+        shootingStatus.add("NotReady");
+        shootingStatus.add("StillCapturing");
+        shootingStatus.add("StillSaving");
+        shootingStatus.add("MovieWaitRecStart");
+        shootingStatus.add("MovieRecording");
+        shootingStatus.add("MovieWaitRecStop");
+        shootingStatus.add("MovieSaving");
+        shootingStatus.add("IntervalWaitRecStart");
+        shootingStatus.add("IntervalRecording");
+        shootingStatus.add("IntervalWaitRecStop");
+        shootingStatus.add("AudioWaitRecStart");
+        shootingStatus.add("AudioRecording");
+        shootingStatus.add("AudioWaitRecStop");
+        shootingStatus.add("AudioSaving");
+
+        return shootingStatus.contains(currentStatus);
+    }
+
+    private void prepareOpenConnection() {
+        Log.d(TAG, "prepareToOpenConection() exec");
+
+
+        new Thread() {
+
+            @Override
+            public void run() {
+                try {
+                    // Get supported API list (Camera API)
+                    JSONObject replyJsonCamera = mRemoteApi.getCameraMethodTypes();
+                    loadSupportedApiList(replyJsonCamera);
+
+                    try {
+                        // Get supported API list (AvContent API)
+                        JSONObject replyJsonAvcontent = mRemoteApi.getAvcontentMethodTypes();
+                        loadSupportedApiList(replyJsonAvcontent);
+                    } catch (IOException e) {
+                        Log.d(TAG, "AvContent is not support.");
+                    }
+
+                    TimelapseApplication app = (TimelapseApplication) getActivity().getApplication();
+                    app.setSupportedApiList(mSupportedApiSet);
+
+                    if (!isApiSupported("setCameraFunction")) {
+
+                        // this device does not support setCameraFunction.
+                        // No need to check camera status.
+
+                        openConnection();
+
+                    } else {
+
+                        // this device supports setCameraFunction.
+                        // after confirmation of camera state, open connection.
+                        Log.d(TAG, "this device support set camera function");
+
+                        if (!isApiSupported("getEvent")) {
+                            Log.e(TAG, "this device is not support getEvent");
+                            openConnection();
+                            return;
+                        }
+
+                        // confirm current camera status
+                        String cameraStatus = null;
+                        JSONObject replyJson = mRemoteApi.getEvent(false);
+                        JSONArray resultsObj = replyJson.getJSONArray("result");
+                        JSONObject cameraStatusObj = resultsObj.getJSONObject(1);
+                        String type = cameraStatusObj.getString("type");
+                        if ("cameraStatus".equals(type)) {
+                            cameraStatus = cameraStatusObj.getString("cameraStatus");
+                        } else {
+                            throw new IOException();
+                        }
+
+                        if (isShootingStatus(cameraStatus)) {
+                            Log.d(TAG, "camera function is Remote Shooting.");
+                            openConnection();
+                        } else {
+                            // set Listener
+                            startOpenConnectionAfterChangeCameraState();
+
+                            // set Camera function to Remote Shooting
+                            replyJson = mRemoteApi.setCameraFunction("Remote Shooting");
+                        }
+                    }
+                } catch (IOException e) {
+                    Log.w(TAG, "prepareToStartContentsListMode: IOException: " + e.getMessage());
+                    DisplayHelper.toast(getActivity().getApplicationContext(), R.string.msg_error_api_calling);
+                    DisplayHelper.setProgressIndicator(getActivity(), false);
+                } catch (JSONException e) {
+                    Log.w(TAG, "prepareToStartContentsListMode: JSONException: " + e.getMessage());
+                    DisplayHelper.toast(getActivity().getApplicationContext(), R.string.msg_error_api_calling);
+                    DisplayHelper.setProgressIndicator(getActivity(), false);
+                }
+            }
+        }.start();
+    }
+
+
+    private void startOpenConnectionAfterChangeCameraState() {
+        Log.d(TAG, "startOpenConectiontAfterChangeCameraState() exec");
+
+        getActivity().runOnUiThread(new Runnable() {
+
+            @Override
+            public void run() {
+                mEventObserver
+                        .setEventChangeListener(new SimpleCameraEventObserver.ChangeListenerTmpl() {
+
+                            @Override
+                            public void onCameraStatusChanged(String status) {
+                                Log.d(TAG, "onCameraStatusChanged:" + status);
+                                if ("IDLE".equals(status) || "NotReady".equals(status)) {
+                                    openConnection();
+                                }
+                                refreshUi();
+                            }
+
+                            @Override
+                            public void onShootModeChanged(String shootMode) {
+                                refreshUi();
+                            }
+
+                            @Override
+                            public void onStorageIdChanged(String storageId) {
+                                refreshUi();
+                            }
+                        });
+
+                mEventObserver.start();
+            }
+        });
+    }
+
+    /**
+     * Retrieve a list of APIs that are supported by the target device.
+     *
+     * @param replyJson
+     */
+    private void loadSupportedApiList(JSONObject replyJson) {
+        synchronized (mSupportedApiSet) {
+            try {
+                JSONArray resultArrayJson = replyJson.getJSONArray("results");
+                for (int i = 0; i < resultArrayJson.length(); i++) {
+                    mSupportedApiSet.add(resultArrayJson.getJSONArray(i).getString(0));
+                }
+            } catch (JSONException e) {
+                Log.w(TAG, "loadSupportedApiList: JSON format error.");
+            }
+        }
+    }
     /**
      * Take a picture and retrieve the image data.
      */
@@ -470,7 +690,18 @@ public class StillImageSettingsFragment extends StepFragment {
     private void getInfoForScreenApi() {
         try {
             JSONObject replyJson = null;
+            replyJson = mRemoteApi.getAvailableApiList();
+            JSONArray result = replyJson.getJSONArray("result");
+            for (int i = 0; i < result.length(); i++) {
+            Log.d(TAG, "Api Function no. " + i + "is:  " + result.getString(i));
+            }
+            replyJson = mRemoteApi.startRecMode();
+            result = replyJson.getJSONArray("result");
+            for (int i = 0; i < result.length(); i++) {
+                Log.d(TAG, "Api Function no. " + i + "is:  " + result.getString(i));
+            }
             replyJson = mRemoteApi.getAvailableFNumber();
+
             populateSettingsObjects(replyJson, apertureSettings);
             replyJson = mRemoteApi.getAvailableFocusModes();
             populateSettingsObjects(replyJson, focusModeSettings);
@@ -489,6 +720,7 @@ public class StillImageSettingsFragment extends StepFragment {
 
     private void populateSettingsObjects(JSONObject replyJson, AvailableCameraSettings apertureSettings) throws JSONException {
         if (replyJson != null) {
+
             extractAvailableSettings(replyJson.getJSONArray("result"), apertureSettings);
         }
     }
@@ -684,7 +916,7 @@ public class StillImageSettingsFragment extends StepFragment {
 
     private void startLiveview() {
         if (liveViewSurfaceView == null) {
-            Log.w(TAG, "startLiveview mLiveviewSurface is null.");
+            Log.w(TAG, "startLiveview liveViewSurfaceView is null.");
             return;
         }
         new Thread() {
