@@ -10,6 +10,9 @@ public class AvailableCameraSettings {
     private String currentSetting;
     private List<String> availableSettings;
 
+    public AvailableCameraSettings() {
+    }
+
     public List<String> getAvailableSettings() {
         return availableSettings;
     }
@@ -28,5 +31,13 @@ public class AvailableCameraSettings {
 
     public AvailableCameraSettings(SettingType setting) {
         this.setting = setting;
+    }
+
+    public void setSetting(SettingType setting) {
+        this.setting = setting;
+    }
+
+    public SettingType getSetting() {
+        return setting;
     }
 }

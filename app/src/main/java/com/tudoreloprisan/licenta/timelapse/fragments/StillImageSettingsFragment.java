@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.StrictMode;
@@ -13,7 +14,6 @@ import android.support.annotation.Nullable;
 import android.text.Spanned;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -64,7 +64,6 @@ public class StillImageSettingsFragment extends StepFragment {
     private static final String TAG = StillImageSettingsFragment.class.getSimpleName();
 
     private CameraIO mCameraIO;
-    private RemoteApi remoteApi;
     private final Set<String> mAvailableCameraApiSet = new HashSet<String>();
     private SimpleStreamSurfaceView liveViewSurfaceView;
     private ServerDevice mTargetServer;
@@ -105,8 +104,7 @@ public class StillImageSettingsFragment extends StepFragment {
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         mCameraIO = ((TimelapseApplication) getActivity().getApplication()).getCameraIO();
         //FIXME DRAGONS AHEAD
-        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
-        StrictMode.setThreadPolicy(policy);
+        //enableStrictMode();
         //END OF DRAGONS
         View viewResult = inflater.inflate(R.layout.still_image_fragment, container, false);
 
@@ -191,88 +189,13 @@ public class StillImageSettingsFragment extends StepFragment {
 
         liveViewSurfaceView = (SimpleStreamSurfaceView) viewResult.findViewById(R.id.camera_settings_liveview);
         apertureSpinner = ((Spinner) viewResult.findViewById(R.id.apertureButton));
-        ArrayAdapter<String> apertureAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
-        getInfoForScreenApi();
-        apertureAdapter.addAll(apertureSettings.getAvailableSettings());
-        apertureSpinner.setAdapter(apertureAdapter);
-        apertureSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String itemAtPosition = ((String) parent.getItemAtPosition(position));
-                mCameraIO.setAperture(itemAtPosition);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
         shutterSpinner = ((Spinner) viewResult.findViewById(R.id.shutteSpeedButton));
-        ArrayAdapter<String> shutterSpeedAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
-        shutterSpeedAdapter.addAll(shutterSpeedSettings.getAvailableSettings());
-        shutterSpinner.setAdapter(shutterSpeedAdapter);
-        shutterSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String itemAtPosition = ((String) parent.getItemAtPosition(position));
-                mCameraIO.setShutterSpeed(itemAtPosition);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
         isoSpinner = ((Spinner) viewResult.findViewById(R.id.iSObutton));
-        ArrayAdapter<String> isoSpeedAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
-        isoSpeedAdapter.addAll(isoSettings.getAvailableSettings());
-        isoSpinner.setAdapter(isoSpeedAdapter);
-        isoSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String itemAtPosition = ((String) parent.getItemAtPosition(position));
-                mCameraIO.setIsoSpeed(itemAtPosition);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
-
         focusModeSpinner = ((Spinner) viewResult.findViewById(R.id.focusModeButton));
-        ArrayAdapter<String> focusModeAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
-        focusModeAdapter.addAll(focusModeSettings.getAvailableSettings());
-        focusModeSpinner.setAdapter(focusModeAdapter);
-        focusModeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String itemAtPosition = ((String) parent.getItemAtPosition(position));
-                mCameraIO.setFocusMode(itemAtPosition);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
         manualSwitch = ((Switch) viewResult.findViewById(R.id.manualSwitch));
-        if (exposureModeSettings.getCurrentSetting().equals(ExposureMode.MANUAL)) {
-            manualSwitch.setChecked(false);
-        }
-        manualSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                mCameraIO.setExposureMode(isChecked == true ? ExposureMode.MANUAL.getName() : ExposureMode.INTELLIGENT_AUTO.getName());
-            }
-        });
 
+        getInfoForScreenApi();
         exposureTextView = ((TextView) viewResult.findViewById(R.id.exposureLabel));
-
 
         zoomControls = ((ZoomControls) viewResult.findViewById(R.id.zoomControls));
         zoomControls.setOnZoomInClickListener(new View.OnClickListener() {
@@ -288,63 +211,6 @@ public class StillImageSettingsFragment extends StepFragment {
                 mCameraIO.actZoom(CameraIO.ZoomDirection.OUT);
             }
         });
-
-
-//        zoomInButton.setOnLongClickListener(new View.OnLongClickListener() {
-//
-//            @Override
-//            public boolean onLongClick(View arg0) {
-//                mCameraIO.actZoom(CameraIO.ZoomDirection.IN, CameraIO.ZoomAction.START);
-//                return true;
-//            }
-//        });
-//
-//        zoomOutButton.setOnLongClickListener(new View.OnLongClickListener() {
-//
-//            @Override
-//            public boolean onLongClick(View arg0) {
-//                mCameraIO.actZoom(CameraIO.ZoomDirection.OUT, CameraIO.ZoomAction.START);
-//                return true;
-//            }
-//        });
-
-//        zoomInButton.setOnTouchListener(new View.OnTouchListener() {
-//
-//            long downTime = -1;
-//
-//            @Override
-//            public boolean onTouch(View v, MotionEvent event) {
-//
-//                if (event.getAction() == MotionEvent.ACTION_UP) {
-//                    if (System.currentTimeMillis() - downTime > 500) {
-//                        mCameraIO.actZoom(CameraIO.ZoomDirection.IN, CameraIO.ZoomAction.STOP);
-//                    }
-//                }
-//                if (event.getAction() == MotionEvent.ACTION_DOWN) {
-//                    downTime = System.currentTimeMillis();
-//                }
-//                return false;
-//            }
-//        });
-//
-//        zoomOutButton.setOnTouchListener(new View.OnTouchListener() {
-//
-//            long downTime = -1;
-//
-//            @Override
-//            public boolean onTouch(View v, MotionEvent event) {
-//
-//                if (event.getAction() == MotionEvent.ACTION_UP) {
-//                    if (System.currentTimeMillis() - downTime > 500) {
-//                        mCameraIO.actZoom(CameraIO.ZoomDirection.OUT, CameraIO.ZoomAction.STOP);
-//                    }
-//                }
-//                if (event.getAction() == MotionEvent.ACTION_DOWN) {
-//                    downTime = System.currentTimeMillis();
-//                }
-//                return false;
-//            }
-//        });
 
 
         Button takePictureButton = (Button) viewResult.findViewById(R.id.cameraSettingsTakePictureButton);
@@ -376,6 +242,11 @@ public class StillImageSettingsFragment extends StepFragment {
         });
 
         return viewResult;
+    }
+
+    private void enableStrictMode() {
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
     }
 
 
@@ -427,8 +298,8 @@ public class StillImageSettingsFragment extends StepFragment {
         prepareOpenConnection();
 
         Log.d(TAG, "onResume() completed.");
-        
-        
+
+
     }
 
     /**
@@ -599,6 +470,7 @@ public class StillImageSettingsFragment extends StepFragment {
             }
         }
     }
+
     /**
      * Take a picture and retrieve the image data.
      */
@@ -686,43 +558,181 @@ public class StillImageSettingsFragment extends StepFragment {
         });
     }
 
+    private class CameraSettings extends AsyncTask<AvailableCameraSettings, Void, AvailableCameraSettings> {
+        AvailableCameraSettings availableCameraSettings = new AvailableCameraSettings();
 
-    private void getInfoForScreenApi() {
-        try {
-            JSONObject replyJson = null;
-            replyJson = mRemoteApi.getAvailableApiList();
-            JSONArray result = replyJson.getJSONArray("result");
-            for (int i = 0; i < result.length(); i++) {
-            Log.d(TAG, "Api Function no. " + i + "is:  " + result.getString(i));
+
+        @Override
+        protected void onPostExecute(AvailableCameraSettings availableCameraSettings) {
+            if (availableCameraSettings.getSetting().equals(SettingType.APERTURE)) {
+                apertureSettings = availableCameraSettings;
+                ArrayAdapter<String> apertureAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
+                apertureAdapter.addAll(apertureSettings.getAvailableSettings());
+                apertureSpinner.setAdapter(apertureAdapter);
+                apertureSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                        String itemAtPosition = ((String) parent.getItemAtPosition(position));
+                        mCameraIO.setAperture(itemAtPosition);
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parent) {
+
+                    }
+                });
+            } else if (availableCameraSettings.getSetting().equals(SettingType.ISO)) {
+                isoSettings = availableCameraSettings;
+                ArrayAdapter<String> isoSpeedAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
+                isoSpeedAdapter.addAll(isoSettings.getAvailableSettings());
+                isoSpinner.setAdapter(isoSpeedAdapter);
+                isoSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                        String itemAtPosition = ((String) parent.getItemAtPosition(position));
+                        mCameraIO.setIsoSpeed(itemAtPosition);
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parent) {
+
+                    }
+                });
+            } else if (availableCameraSettings.getSetting().equals(SettingType.SHUTTER_SPEED)) {
+                shutterSpeedSettings = availableCameraSettings;
+                ArrayAdapter<String> shutterSpeedAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
+                shutterSpeedAdapter.addAll(shutterSpeedSettings.getAvailableSettings());
+                shutterSpinner.setAdapter(shutterSpeedAdapter);
+                shutterSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                        String itemAtPosition = ((String) parent.getItemAtPosition(position));
+                        mCameraIO.setShutterSpeed(itemAtPosition);
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parent) {
+
+                    }
+                });
+            } else if (availableCameraSettings.getSetting().equals(SettingType.EXPOSURE_MODES)) {
+                exposureModeSettings = availableCameraSettings;
+                if (exposureModeSettings.getCurrentSetting().equals(ExposureMode.MANUAL)) {
+                    manualSwitch.setChecked(false);
+                }
+                manualSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                        mCameraIO.setExposureMode(isChecked == true ? ExposureMode.MANUAL.getName() : ExposureMode.INTELLIGENT_AUTO.getName());
+                    }
+                });
+            } else if (availableCameraSettings.getSetting().equals(SettingType.FOCUS_MODE)) {
+                focusModeSettings = availableCameraSettings;
+
+                ArrayAdapter<String> focusModeAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
+                focusModeAdapter.addAll(focusModeSettings.getAvailableSettings());
+                focusModeSpinner.setAdapter(focusModeAdapter);
+                focusModeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                        String itemAtPosition = ((String) parent.getItemAtPosition(position));
+                        mCameraIO.setFocusMode(itemAtPosition);
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parent) {
+
+                    }
+                });
             }
-            replyJson = mRemoteApi.startRecMode();
-            result = replyJson.getJSONArray("result");
-            for (int i = 0; i < result.length(); i++) {
-                Log.d(TAG, "Api Function no. " + i + "is:  " + result.getString(i));
+        }
+
+        @Override
+        protected AvailableCameraSettings doInBackground(AvailableCameraSettings... params) {
+            JSONObject replyJson;
+            try {
+                if (params[0] == null) {
+
+                    replyJson = mRemoteApi.getAvailableApiList();
+                    JSONArray result = replyJson.getJSONArray("result");
+                    for (int i = 0; i < result.length(); i++) {
+                        Log.d(TAG, "Api Function no. " + i + "is:  " + result.getString(i));
+                    }
+                    replyJson = mRemoteApi.startRecMode();
+                    result = replyJson.getJSONArray("result");
+                    for (int i = 0; i < result.length(); i++) {
+                        Log.d(TAG, "Api Function no. " + i + "is:  " + result.getString(i));
+                    }
+                } else {
+
+                    AvailableCameraSettings parameter = params[0];
+
+                    if (parameter.getSetting().equals(SettingType.APERTURE)) {
+                        replyJson = mRemoteApi.getAvailableFNumber();
+//                result = replyJson.getJSONArray("result");
+                        availableCameraSettings.setSetting(SettingType.APERTURE);
+                        populateSettingsObjects(replyJson, availableCameraSettings);
+                    } else if (parameter.getSetting().equals(SettingType.EXPOSURE_MODES)) {
+                        replyJson = mRemoteApi.getAvailableExposureMode();
+//                result = replyJson.getJSONArray("result");
+                        availableCameraSettings.setSetting(SettingType.EXPOSURE_MODES);
+                        populateSettingsObjects(replyJson, availableCameraSettings);
+                    } else if (parameter.getSetting().equals(SettingType.SHUTTER_SPEED)) {
+                        replyJson = mRemoteApi.getAvailableShutterSpeed();
+//                result = replyJson.getJSONArray("result");
+                        availableCameraSettings.setSetting(SettingType.SHUTTER_SPEED);
+                        populateSettingsObjects(replyJson, availableCameraSettings);
+                    } else if (parameter.getSetting().equals(SettingType.FOCUS_MODE)) {
+                        replyJson = mRemoteApi.getAvailableShutterSpeed();
+//                result = replyJson.getJSONArray("result");
+                        availableCameraSettings.setSetting(SettingType.FOCUS_MODE);
+                        populateSettingsObjects(replyJson, availableCameraSettings);
+                    } else if (parameter.getSetting().equals(SettingType.ISO)) {
+                        replyJson = mRemoteApi.getAvailableShutterSpeed();
+//                result = replyJson.getJSONArray("result");
+                        availableCameraSettings.setSetting(SettingType.ISO);
+                        populateSettingsObjects(replyJson, availableCameraSettings);
+                    }
+                }
+            } catch (IOException e) {
+                Log.e(TAG, e.getMessage());
+            } catch (JSONException e) {
+                Log.e(TAG, e.getMessage());
             }
-            replyJson = mRemoteApi.getAvailableFNumber();
 
-            populateSettingsObjects(replyJson, apertureSettings);
-            replyJson = mRemoteApi.getAvailableFocusModes();
-            populateSettingsObjects(replyJson, focusModeSettings);
-            replyJson = mRemoteApi.getAvailableIsoSpeed();
-            populateSettingsObjects(replyJson, isoSettings);
-            replyJson = mRemoteApi.getAvailableShutterSpeed();
-            populateSettingsObjects(replyJson, shutterSpeedSettings);
-            replyJson = mRemoteApi.getAvailableExposureMode();
-            populateSettingsObjects(replyJson, exposureModeSettings);
+            return availableCameraSettings;
+        }
 
-
-        } catch (IOException | JSONException exc) {
-            Log.e(TAG, exc.getMessage());
+        private void populateSettingsObjects(JSONObject replyJson, AvailableCameraSettings apertureSettings) throws JSONException {
+            if (replyJson != null) {
+                extractAvailableSettings(replyJson.getJSONArray("result"), apertureSettings);
+            }
         }
     }
 
-    private void populateSettingsObjects(JSONObject replyJson, AvailableCameraSettings apertureSettings) throws JSONException {
-        if (replyJson != null) {
 
-            extractAvailableSettings(replyJson.getJSONArray("result"), apertureSettings);
-        }
+    private void getInfoForScreenApi() {
+        //WILL BE REPLACED BY ASYNC TASK
+        new CameraSettings().execute();
+        new CameraSettings().execute();
+        new CameraSettings().execute(apertureSettings);
+        new CameraSettings().execute(isoSettings);
+        new CameraSettings().execute(shutterSpeedSettings);
+        new CameraSettings().execute(focusModeSettings);
+        new CameraSettings().execute(exposureModeSettings);
+//            replyJson = mRemoteApi.getAvailableFNumber();
+//
+//            populateSettingsObjects(replyJson, apertureSettings);
+//            replyJson = mRemoteApi.getAvailableFocusModes();
+//            populateSettingsObjects(replyJson, focusModeSettings);
+//            replyJson = mRemoteApi.getAvailableIsoSpeed();
+//            populateSettingsObjects(replyJson, isoSettings);
+//            replyJson = mRemoteApi.getAvailableShutterSpeed();
+//            populateSettingsObjects(replyJson, shutterSpeedSettings);
+//            replyJson = mRemoteApi.getAvailableExposureMode();
+//            populateSettingsObjects(replyJson, exposureModeSettings);
+
+
     }
 
 
@@ -832,6 +842,13 @@ public class StillImageSettingsFragment extends StepFragment {
             availableSettingsList.add(availableSettings.getString(i));
         }
         availableCameraSettings.setAvailableSettings(availableSettingsList);
+        //Display current and available settings
+        Log.d(TAG, "The current setting for " + availableCameraSettings.getSetting().getName() +
+                " is: " + availableCameraSettings.getCurrentSetting());
+        Log.d(TAG, "The available settings for this mode are: ");
+        for (String s : availableCameraSettings.getAvailableSettings()) {
+            Log.d(TAG, "s \n");
+        }
     }
 
     /**
