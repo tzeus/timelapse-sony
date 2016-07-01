@@ -34,6 +34,7 @@ import com.tudoreloprisan.licenta.timelapse.fragments.CaptureFragmentListener;
 import com.tudoreloprisan.licenta.timelapse.fragments.ConnectionFragment;
 import com.tudoreloprisan.licenta.timelapse.fragments.FinishFragment;
 import com.tudoreloprisan.licenta.timelapse.fragments.FinishFragmentListener;
+import com.tudoreloprisan.licenta.timelapse.fragments.StillImageSettingsFragment;
 import com.tudoreloprisan.licenta.timelapse.fragments.TimelapseSettingsFragment;
 
 import java.util.List;
@@ -57,7 +58,7 @@ FinishFragmentListener, CaptureFragmentListener {
 	private FinishFragment mFinishFragment = new FinishFragment();
 	private CaptureFragment mCaptureFragment = new CaptureFragment();
 
-	private StepFragment[] fragmentsArray = new StepFragment[] { new ConnectionFragment(), new CameraSettingsFragment(),
+	private StepFragment[] fragmentsArray = new StepFragment[] { new ConnectionFragment(), new StillImageSettingsFragment(),
 			new TimelapseSettingsFragment(), mCaptureFragment, mFinishFragment };
 
 	private NfcAdapter mNfcAdapter;

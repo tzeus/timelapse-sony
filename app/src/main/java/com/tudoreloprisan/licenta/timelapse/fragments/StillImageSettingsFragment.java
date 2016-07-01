@@ -72,85 +72,11 @@ public class StillImageSettingsFragment extends StepFragment {
         getInfoForScreen();
 
         apertureSpinner = ((Spinner) viewResult.findViewById(R.id.apertureButton));
-        ArrayAdapter<String> apertureAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
-        apertureAdapter.addAll(apertureSettings.getAvailableSettings());
-        apertureSpinner.setAdapter(apertureAdapter);
-        apertureSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String itemAtPosition = ((String) parent.getItemAtPosition(position));
-                mCameraIO.setAperture(itemAtPosition);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
         shutterSpinner = ((Spinner) viewResult.findViewById(R.id.shutteSpeedButton));
-        ArrayAdapter<String> shutterSpeedAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
-        shutterSpeedAdapter.addAll(shutterSpeedSettings.getAvailableSettings());
-        shutterSpinner.setAdapter(shutterSpeedAdapter);
-        shutterSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String itemAtPosition = ((String) parent.getItemAtPosition(position));
-                mCameraIO.setShutterSpeed(itemAtPosition);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
         isoSpinner = ((Spinner) viewResult.findViewById(R.id.iSObutton));
-        ArrayAdapter<String> isoSpeedAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
-        isoSpeedAdapter.addAll(isoSettings.getAvailableSettings());
-        isoSpinner.setAdapter(isoSpeedAdapter);
-        isoSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String itemAtPosition = ((String) parent.getItemAtPosition(position));
-                mCameraIO.setIsoSpeed(itemAtPosition);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
-
-
         focusModeSpinner = ((Spinner) viewResult.findViewById(R.id.focusModeButton));
-        ArrayAdapter<String> focusModeAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
-        focusModeAdapter.addAll(focusModeSettings.getAvailableSettings());
-        focusModeSpinner.setAdapter(focusModeAdapter);
-        focusModeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String itemAtPosition = ((String) parent.getItemAtPosition(position));
-                mCameraIO.setFocusMode(itemAtPosition);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
         manualSwitch = ((Switch) viewResult.findViewById(R.id.manualSwitch));
-        if (exposureModeSettings.getCurrentSetting().equals(ExposureMode.MANUAL)) {
-            manualSwitch.setChecked(false);
-        }
-        manualSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                mCameraIO.setExposureMode(isChecked==true ? ExposureMode.MANUAL.getName() : ExposureMode.INTELLIGENT_AUTO.getName());
-            }
-        });
+
 
         exposureTextView = ((TextView) viewResult.findViewById(R.id.exposureLabel));
 
@@ -257,6 +183,93 @@ public class StillImageSettingsFragment extends StepFragment {
         });
 
         return viewResult;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        //Adding adapters for spinners
+        ArrayAdapter<String> apertureAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
+        if (!apertureAdapter.isEmpty()) {
+            apertureAdapter.addAll(apertureSettings.getAvailableSettings());
+            apertureSpinner.setAdapter(apertureAdapter);
+        }
+        apertureSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String itemAtPosition = ((String) parent.getItemAtPosition(position));
+                mCameraIO.setAperture(itemAtPosition);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        ArrayAdapter<String> shutterSpeedAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
+        if (!shutterSpeedAdapter.isEmpty()) {
+            shutterSpeedAdapter.addAll(shutterSpeedSettings.getAvailableSettings());
+            shutterSpinner.setAdapter(shutterSpeedAdapter);
+        }
+        shutterSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String itemAtPosition = ((String) parent.getItemAtPosition(position));
+                mCameraIO.setShutterSpeed(itemAtPosition);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        ArrayAdapter<String> isoSpeedAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
+        if (!isoSpeedAdapter.isEmpty()) {
+            isoSpeedAdapter.addAll(isoSettings.getAvailableSettings());
+            isoSpinner.setAdapter(isoSpeedAdapter);
+        }
+        isoSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String itemAtPosition = ((String) parent.getItemAtPosition(position));
+                mCameraIO.setIsoSpeed(itemAtPosition);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        ArrayAdapter<String> focusModeAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item);
+        if (!focusModeAdapter.isEmpty()) {
+            focusModeAdapter.addAll(focusModeSettings.getAvailableSettings());
+            focusModeSpinner.setAdapter(focusModeAdapter);
+        }
+        focusModeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String itemAtPosition = ((String) parent.getItemAtPosition(position));
+                mCameraIO.setFocusMode(itemAtPosition);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        if (exposureModeSettings.getCurrentSetting().equals(ExposureMode.MANUAL.getName())) {
+            manualSwitch.setChecked(false);
+        }
+        manualSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                mCameraIO.setExposureMode(isChecked ? ExposureMode.MANUAL.getName() : ExposureMode.INTELLIGENT_AUTO.getName());
+            }
+        });
     }
 
     private void getInfoForScreen() {

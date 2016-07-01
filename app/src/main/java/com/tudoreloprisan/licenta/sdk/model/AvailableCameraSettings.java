@@ -11,10 +11,14 @@ public class AvailableCameraSettings {
     private List<String> availableSettings;
 
     public List<String> getAvailableSettings() {
-        return availableSettings;
+        if (availableSettings== null){
+            return null;
+        }
+            return availableSettings;
     }
 
     public void setAvailableSettings(List<String> availableSettings) {
+
         this.availableSettings = availableSettings;
     }
 
